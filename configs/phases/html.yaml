@@ -1,0 +1,31 @@
+phase:
+  name: html
+  version: 4
+  information_boundary: html
+
+extractors:
+  - name: html-js
+    schema: html-js-v5
+  - name: dom-fingerprint
+    schema: dom-fingerprint-v2
+
+classifiers:
+  - name: html-js-classifier
+    version: 9
+    input_schema: html-js-v5
+  - name: dom-phishing-classifier
+    version: 5
+    input_schema: dom-fingerprint-v2
+
+execution:
+  parallel_classifiers: true
+
+policy:
+  type: rule_based
+  outputs:
+    - benign
+    - phishing
+    - malware
+    - spam
+    - uncertain
+  otherwise: uncertain

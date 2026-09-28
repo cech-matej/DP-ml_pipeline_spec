@@ -1,0 +1,31 @@
+classifier:
+  name: html-js-classifier
+  version: 9
+
+implementation:
+  framework: lightgbm
+  source_module: domain_detection.classifiers.html_js
+
+input:
+  feature_schema: html-js-v5
+
+output:
+  type: multiclass
+  classes:
+    - benign
+    - phishing
+    - malware
+    - spam
+  score_semantics: calibrated_probability
+
+explainability:
+  local:
+    method: shap
+    required: true
+  global:
+    methods:
+      - native_gain
+      - shap_mean_abs
+
+training:
+  outlier_policy: html-js-outliers-v1

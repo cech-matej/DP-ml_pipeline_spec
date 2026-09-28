@@ -1,0 +1,22 @@
+schema:
+  name: dom-fingerprint
+  version: 2
+  availability_boundary: html
+
+features:
+  - name: dom_node_count
+    type: int32
+    nullable: false
+    source: dom
+  - name: dom_depth
+    type: int32
+    nullable: false
+    source: dom
+  - name: form_structure_hash
+    type: string
+    nullable: false
+    source: dom
+  - name: phishing_template_similarity
+    type: float32
+    nullable: false
+    source: dom

@@ -1,0 +1,20 @@
+# This is an orchestration example only.
+# Collection and routing are outside the ML pipeline.
+
+cascade:
+  name: example
+  version: 1
+
+phases:
+  - name: lexical
+    information_boundary: lexical
+  - name: dns
+    information_boundary: dns
+  - name: tls-rdap
+    information_boundary: tls-rdap
+  - name: html
+    microservice: html-phase
+    information_boundary: html
+
+# The future THOR flow decides when each phase is called.
+# The ML phase itself does not initiate collection.

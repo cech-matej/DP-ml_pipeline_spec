@@ -1,0 +1,22 @@
+schema:
+  name: html-js
+  version: 5
+  availability_boundary: html
+
+features:
+  - name: script_count
+    type: float32
+    nullable: false
+    source: html
+  - name: external_script_ratio
+    type: float32
+    nullable: false
+    source: html
+  - name: form_count
+    type: int32
+    nullable: false
+    source: html
+  - name: inline_js_entropy
+    type: float32
+    nullable: false
+    source: html

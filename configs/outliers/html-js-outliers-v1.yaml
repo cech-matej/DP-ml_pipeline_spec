@@ -1,0 +1,12 @@
+outlier_policy:
+  name: html-js-outliers-v1
+  scope: training_only
+
+method:
+  type: isolation_forest
+  contamination: 0.01
+
+action:
+  remove: true
+
+minimum_training_rows: 10000

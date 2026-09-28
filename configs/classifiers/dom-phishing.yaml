@@ -1,0 +1,23 @@
+classifier:
+  name: dom-phishing-classifier
+  version: 5
+
+implementation:
+  framework: similarity-detector
+  source_module: domain_detection.classifiers.dom_phishing
+
+input:
+  feature_schema: dom-fingerprint-v2
+
+output:
+  type: score
+  score_name: phishing_similarity
+  range: [0.0, 1.0]
+
+explainability:
+  local:
+    method: similarity_components
+    required: true
+  global:
+    methods:
+      - component_importance

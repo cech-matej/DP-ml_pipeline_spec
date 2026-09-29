@@ -9,7 +9,7 @@ It contains:
 - one or more classifiers;
 - explanation implementations;
 - optional phase-level policy;
-- transport adapters.
+- a replaceable transport wrapper (HTTP or Kafka).
 
 ## Phase YAML reference
 
@@ -144,3 +144,28 @@ A phase version changes when any of these change:
 - explanation implementation;
 - phase policy;
 - execution semantics.
+
+
+## Transport configuration
+
+The phase manifest may select its deployment wrapper:
+
+### `transport.type`
+
+Selects the wire wrapper. Supported examples are `http` for standalone deployment and `kafka` for a Kafka-based deployment such as the future THOR V1 integration.
+
+### `transport.http`
+
+HTTP listener settings. `host` is the bind address and `port` is the listener port. These values affect only the HTTP wrapper.
+
+### `transport.kafka`
+
+Kafka wrapper settings:
+
+- `bootstrap_servers`: Kafka broker address(es);
+- `input_topic`: topic consumed by this phase microservice;
+- `output_topic`: topic receiving the phase response;
+- `group_id`: consumer group used by the service;
+- `client_id`: optional Kafka client identifier.
+
+Changing `transport.type` and its transport-specific configuration should not require changes to feature extractors, classifiers, policies or the phase runner.

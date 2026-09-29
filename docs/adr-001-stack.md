@@ -26,7 +26,7 @@ The ML application should remain independent of either tracking backend.
 - Redis/fact store;
 - collectors;
 - external API clients;
-- THOR V1 orchestration;
+- THOR orchestration;
 - online feature serving.
 
 These are integration/runtime concerns outside the ML core.

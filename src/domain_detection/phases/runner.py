@@ -1,12 +1,15 @@
+from concurrent.futures import ThreadPoolExecutor
+
 from .contracts import ClassifierResult, PhaseResult
 
 
 class PhaseRunner:
-    def __init__(self, name, version, extractors, classifiers):
+    def __init__(self, name, version, extractors, classifiers, *, parallel_classifiers=True):
         self.name = name
         self.version = version
         self.extractors = extractors
         self.classifiers = classifiers
+        self.parallel_classifiers = parallel_classifiers
 
     def run(self, phase_input):
         feature_vectors = {
@@ -14,19 +17,24 @@ class PhaseRunner:
             for name, extractor in self.extractors.items()
         }
 
-        results = []
-        for name, classifier in self.classifiers.items():
+        def run_classifier(item):
+            name, classifier = item
             fv = feature_vectors[classifier.feature_schema]
             prediction = classifier.predict(fv)
             explanation = classifier.explain(fv, prediction)
-            results.append(
-                ClassifierResult(
-                    classifier=name,
-                    version=classifier.version,
-                    prediction=prediction,
-                    explanation=explanation,
-                )
+            return ClassifierResult(
+                classifier=name,
+                version=classifier.version,
+                prediction=prediction,
+                explanation=explanation,
             )
+
+        items = list(self.classifiers.items())
+        if self.parallel_classifiers and len(items) > 1:
+            with ThreadPoolExecutor(max_workers=len(items)) as pool:
+                results = list(pool.map(run_classifier, items))
+        else:
+            results = [run_classifier(item) for item in items]
 
         return PhaseResult(
             request_id=phase_input.request_id,

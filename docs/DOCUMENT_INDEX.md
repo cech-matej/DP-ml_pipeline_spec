@@ -12,7 +12,7 @@
 
 ## Classifiers and inference
 - `classifiers.md` — binary, multiclass and detector contracts
-- `classifier-microservice.md` — standalone/HTTP/THOR service contract
+- `classifier-microservice.md` — transport-independent phase service contract plus HTTP/Kafka wrappers
 - `inference.md` — inference result and per-feature explanations
 - `explainability.md` — SHAP-first local explanations and global importance
 

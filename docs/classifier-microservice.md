@@ -1,14 +1,16 @@
 # Phase microservice contract
 
-## Important design choice
+## One phase = one microservice
 
-**One phase = one microservice**, containing:
+The deployment unit is a **phase**, containing:
 
 - extractor(s);
 - one or more classifiers;
-- explanation logic.
+- explanation logic;
+- optional phase policy;
+- a replaceable transport wrapper.
 
-This avoids repeatedly extracting the same input data for several classifiers.
+The phase core does not know whether its request arrived through HTTP or Kafka.
 
 ## Core API
 
@@ -18,25 +20,16 @@ The transport-independent core is:
 result = phase.run(phase_input)
 ```
 
-Transport adapters expose that same operation.
+The service handler wraps this with a stable wire-neutral contract:
 
-### Standalone HTTP
-
-```http
-GET /health
-GET /metadata
-POST /predict
+```python
+request = ServiceRequest.from_dict(payload)
+response = handler.handle(request)
 ```
 
-`/predict` performs the complete phase operation, including local explanations.
+## Wire contract
 
-There is intentionally no separate `/explain` endpoint for normal inference.
-
-### Optional diagnostic endpoint
-
-A separate endpoint such as `/explain-fixture` may be provided for debugging, but it is not part of the production inference contract.
-
-## Input
+Input:
 
 ```json
 {
@@ -51,9 +44,7 @@ A separate endpoint such as `/explain-fixture` may be provided for debugging, bu
 }
 ```
 
-The exact input shape is phase-specific. The important property is that collection has already happened.
-
-## Output
+Output:
 
 ```json
 {
@@ -102,28 +93,76 @@ The exact input shape is phase-specific. The important property is that collecti
 }
 ```
 
-## THOR adapter
+The concrete classifier payload is produced by the phase result serializer. The transport wrapper does not interpret classifier semantics.
 
-The THOR adapter maps the same core result to a `service.result`.
+## HTTP wrapper
 
-THOR's service contract says services receive the complete snapshot of their declared `requires-facts` and return `provides-facts`; services do not access the fact store.
+`domain_detection.serving.http.create_app(phase)` creates a FastAPI application exposing:
 
-The adapter should therefore:
-
-```text
-service.dispatch
-      |
-      v
-PhaseInput.from_thor_facts(...)
-      |
-      v
-phase.run(...)
-      |
-      v
-ThorServiceResult.from_phase_result(...)
+```http
+GET /health
+POST /predict
 ```
 
-The THOR result should expose classifier predictions and explanation facts under names declared by the service catalog.
+Example configuration:
+
+```yaml
+transport:
+  type: http
+  http:
+    host: 0.0.0.0
+    port: 8080
+```
+
+HTTP is the default standalone transport because it is simple to invoke from local scripts, tests and a future deployment platform.
+
+## Kafka wrapper
+
+`domain_detection.serving.kafka.KafkaWrapper` consumes requests from one configured topic and publishes responses to another:
+
+```yaml
+transport:
+  type: kafka
+  kafka:
+    bootstrap_servers: localhost:9092
+    input_topic: thor.ml.html.request
+    output_topic: thor.ml.html.response
+    group_id: malicious-domain-html-v1
+    client_id: malicious-domain-html
+```
+
+Parameters:
+
+- `bootstrap_servers`: Kafka broker address(es);
+- `input_topic`: topic from which this phase consumes requests;
+- `output_topic`: topic to which this phase publishes responses;
+- `group_id`: consumer group for this microservice instance set;
+- `client_id`: optional Kafka client identifier.
+
+The wrapper does not decide which phase to call next and does not access the THOR fact store. Topic routing/orchestration remains the caller's responsibility.
+
+## Switching wrappers
+
+The same phase instance can be exposed through either wrapper:
+
+```text
+                         +----------------+
+HTTP ------------------->|                |
+                         | ServiceHandler |----> PhaseRunner
+Kafka input topic ------>|                |
+                         +----------------+
+                                |
+                                +----> HTTP response
+                                +----> Kafka output topic
+```
+
+There is no THOR adapter class in the architecture. Deployment chooses the wrapper.
+
+## Explanation is part of inference
+
+There is intentionally no separate `/explain` endpoint for normal inference. `/predict` returns predictions and local explanation data together.
+
+A diagnostic endpoint may be added later, but it is not the production explanation contract.
 
 ## No collection metrics here
 
@@ -134,6 +173,4 @@ The phase service does not record:
 - collection cost;
 - number of collectors executed.
 
-Those belong to the collection/orchestration subsystem.
-
-It may record phase-local metrics such as inference latency, extractor latency, classifier latency and explanation latency.
+Those belong to the collection/orchestration subsystem. It may record phase-local inference, extraction, classifier and explanation latency.

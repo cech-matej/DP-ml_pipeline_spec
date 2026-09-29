@@ -32,7 +32,7 @@ Do not duplicate the feature schema in Python or classifier configuration.
 5. Add phase policy if required.
 6. Add standalone tests.
 7. Add service contract tests.
-8. Add a THOR adapter only when THOR integration is available.
+8. Add or configure a transport wrapper; do not add THOR-specific logic to the phase core.
 
 ## Version rules
 

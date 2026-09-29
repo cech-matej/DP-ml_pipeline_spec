@@ -1,0 +1,8 @@
+transport:
+  type: kafka
+  kafka:
+    bootstrap_servers: localhost:9092
+    input_topic: thor.ml.html.request
+    output_topic: thor.ml.html.response
+    group_id: malicious-domain-html-v1
+    client_id: malicious-domain-html

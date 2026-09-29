@@ -13,15 +13,14 @@ The documentation describes the target architecture. The implementation can be b
 7. W&B dataset/model artifact helpers.
 8. Training CLI.
 9. Model-specific outlier filtering.
-10. HTTP adapter.
-11. Contract tests.
+10. HTTP transport wrapper.
+11. Kafka transport wrapper.
+12. Contract tests.
 
 ## Part 2: THOR integration
 
-1. THOR dispatch adapter.
-2. THOR result adapter.
-3. Service catalog entries.
-4. Kafka transport.
-5. Integration tests against THOR schemas.
+1. Finalize the Kafka wire envelope against the THOR V1 service schema.
+2. Service catalog entries.
+3. Integration tests against THOR schemas/topics.
 
-No feature extractor or classifier should need to change merely because the transport changes from standalone to THOR.
+No feature extractor, classifier, policy or phase runner should need to change merely because the transport changes from standalone HTTP to THOR Kafka.

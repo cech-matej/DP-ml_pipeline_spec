@@ -54,8 +54,8 @@ Run the same fixture through:
 
 ```text
 Phase Core
-Standalone HTTP adapter
-Future THOR adapter
+Standalone HTTP wrapper
+Kafka wrapper
 ```
 
 and compare the semantic result.
@@ -93,3 +93,14 @@ Keep a stable, versioned regression set separate from training data. It should c
 - malformed input;
 - missing optional facts;
 - explanation edge cases.
+
+## 9. Transport contract tests
+
+The transport layer should be tested independently from the model. In particular, verify that:
+
+- an HTTP JSON payload and a Kafka JSON payload deserialize to the same `ServiceRequest`;
+- both wrappers invoke the same `ServiceHandler`;
+- a `PhaseResult` serializes to the same semantic `ServiceResponse` regardless of transport;
+- changing `input_topic`/`output_topic` does not change phase behavior.
+
+The repository includes `tests/test_transport_contracts.py` as a minimal example.

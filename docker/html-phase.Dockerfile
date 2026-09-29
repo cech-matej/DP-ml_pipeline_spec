@@ -6,6 +6,9 @@ COPY pyproject.toml .
 COPY src ./src
 COPY configs ./configs
 
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir .[serving]
 
-CMD ["python", "-m", "domain_detection.serving.http", "--phase", "configs/phases/html.yaml", "--host", "0.0.0.0", "--port", "8080"]
+# The repository provides the HTTP wrapper as a reusable app factory.
+# A deployment-specific bootstrap module should construct the configured PhaseRunner
+# and expose it with `domain_detection.serving.http.create_app(phase)`.
+CMD ["python", "-c", "print('Build complete: configure a PhaseRunner and launch create_app(phase) with uvicorn.')"]

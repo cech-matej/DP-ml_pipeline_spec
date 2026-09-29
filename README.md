@@ -50,7 +50,7 @@ The phase does **not collect data**. Collection belongs to another module/system
 - The classification pipeline does not own collection, external API calls, rate limits or collection-cost metrics.
 - Model training/evaluation is model-centric. Stage/cascade metrics are collected only when evaluating an assembled phase/stage/cascade, not during ordinary model training.
 - Outlier handling is model-specific and never mutates the canonical dataset.
-- THOR integration is an adapter layer around the same phase implementation.
+- Transport is a replaceable wrapper around the same phase implementation. Standalone uses HTTP; THOR V1 can use the Kafka wrapper with per-microservice input/output topics. No THOR-specific adapter is required in the phase core.
 
 ## Repository structure
 
@@ -60,12 +60,26 @@ src/domain_detection/
   classifiers/     reusable model implementations and wrappers
   phases/          phase composition and execution
   policies/        optional phase-level decision policies
-  serving/         transport adapters
+  serving/         interchangeable HTTP/Kafka transport wrappers
   training/        dataset loading, training and tuning
   explainability/  local/global explanation adapters
 tests/
 configs/
 docs/
 ```
+
+## Interchangeable service wrappers
+
+The phase core is independent of the wire protocol:
+
+```text
+                 +------------------+
+HTTP request --->|                  |---> HTTP response
+                 |  ServiceHandler  |
+Kafka message -->|   PhaseRunner    |---> Kafka message
+                 +------------------+
+```
+
+Both wrappers use the same `ServiceRequest` / `ServiceResponse` contract. To run standalone, select `type: http`. To deploy behind THOR V1, select `type: kafka` and set the microservice's `input_topic` and `output_topic`. Extractors, classifiers, policies and explainability code do not change. The Kafka wrapper is a transport wrapper, not a THOR business-logic adapter.
 
 Read `docs/DOCUMENT_INDEX.md` first.

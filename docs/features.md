@@ -75,6 +75,12 @@ The information source from which this particular feature is computed. Examples 
 
 `source` is deliberately per-feature because one schema may eventually combine features from multiple information sources.
 
+### Why there is no `available_after` field
+
+`available_after` is not part of the feature-schema contract. It was redundant with `source` in the earlier documentation because both used values such as `html`. The authoritative configuration now uses only `source` for per-feature provenance and `availability_boundary` for schema-level readiness.
+
+Do not add `available_after` to feature files unless the architecture later introduces a separate, explicitly defined concept for feature-level availability that cannot be represented by `source`.
+
 ## 3. Extractor implementation
 
 An extractor should compute values, not redefine their schema:

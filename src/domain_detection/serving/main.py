@@ -1,11 +1,7 @@
-"""Example entry point showing wrapper selection.
-
-The actual application/container can load a configured PhaseRunner and then choose
-HTTP or Kafka without changing the phase implementation.
-"""
-
+"""Example entrypoint selection for a phase transport wrapper."""
 from .factory import build_transport
 
 
-def build_service(phase, transport_config: dict):
-    return build_transport(phase, transport_config)
+def start_transport(phase, config: dict):
+    """Build the configured wrapper; deployment decides HTTP vs Kafka."""
+    return build_transport(phase, config)

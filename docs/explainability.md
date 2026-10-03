@@ -1,10 +1,23 @@
 # Explainability
 
-## Requirement
+## Request-time explainability
 
-Every production inference should carry local explanation data because a later explainability module will consume it.
+Explainability is optional per service request, but it uses the same classification route and the same classifier implementation.
 
-The explanation is part of the classifier result, not a separate on-demand `/explain` operation.
+The request flag is:
+
+```json
+"include_explanations": true
+```
+
+When false, the service performs classification without running the local explanation step. When true, the response includes the configured local explanation for each classifier that supports the declared explanation contract.
+
+This enables an empirical comparison between:
+
+- **eager mode:** explain every classification and retain the explanations for THOR V2;
+- **on-demand mode:** classify normally and re-run selected domains later with `include_explanations: true`.
+
+The project does not assume either strategy is universally better. Prediction latency, explanation latency, storage volume, repeat-classification cost and workload shape should be measured.
 
 ## SHAP
 
@@ -21,7 +34,7 @@ The project should provide adapters for the model families actually used, for ex
 
 ## Local explanation
 
-For each inference:
+For each requested inference:
 
 ```json
 {
@@ -70,8 +83,17 @@ For similarity/fingerprint detectors, explanation may be domain-specific:
 
 The same result contract still applies: identify what evidence contributed to the output.
 
-## Performance
+## Performance measurement
 
-Because explanations are mandatory in inference, explanation latency must be measured separately from prediction latency.
+Prediction and explanation timing should be measured separately. A request with explanations should expose enough internal metrics to compare classification-only execution with classification-plus-explanation execution.
 
-A model cannot be accepted solely because its prediction is fast if its required explanation is operationally unusable.
+For the eager-vs-on-demand experiment, record at least:
+
+- classification latency;
+- explanation latency;
+- end-to-end latency;
+- explanation storage size;
+- number of repeated classifications for on-demand explanations;
+- total compute consumed by each strategy.
+
+The later THOR V2 explainability system is outside this project; this project only defines and optionally returns the local explanation payload.

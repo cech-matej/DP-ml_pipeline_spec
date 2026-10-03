@@ -26,3 +26,5 @@
 - `adr-001-stack.md` — W&B-first stack decision
 - `mlflow-fallback.md` — MLflow fallback mapping
 - `wandb-metadata.md` — W&B metadata/artifact naming convention
+
+- `scaling.md` — batch processing, horizontal replicas, Kafka partitioning and resource scaling by pipeline depth

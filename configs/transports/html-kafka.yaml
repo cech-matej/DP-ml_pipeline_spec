@@ -6,3 +6,6 @@ transport:
     output_topic: thor.ml.html.response
     group_id: malicious-domain-html-v1
     client_id: malicious-domain-html
+
+# Run multiple instances with the same group_id for load balancing.
+# Kafka partitions determine how many consumers can process concurrently.

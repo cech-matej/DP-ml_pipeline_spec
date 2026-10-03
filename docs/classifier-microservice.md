@@ -27,7 +27,7 @@ request = ServiceRequest.from_dict(payload)
 response = handler.handle(request)
 ```
 
-## Wire contract
+## Batch wire contract
 
 Input:
 
@@ -36,11 +36,20 @@ Input:
   "request_id": "req-123",
   "phase": "html",
   "phase_version": "3",
-  "facts": {
-    "html": {
-      "body": "<html>...</html>"
+  "include_explanations": false,
+  "domains": [
+    {
+      "domain_id": "example.com",
+      "facts": {
+        "html-js": {"body": "<html>...</html>"},
+        "dom-fingerprint": {"node_count": 42}
+      }
+    },
+    {
+      "domain_id": "example.org",
+      "facts": {}
     }
-  }
+  ]
 }
 ```
 
@@ -51,49 +60,55 @@ Output:
   "request_id": "req-123",
   "phase": "html",
   "phase_version": "3",
-  "features": {
-    "html-js-v5": {
-      "script_count": 12,
-      "external_script_ratio": 0.91,
-      "form_count": 2
-    }
-  },
-  "classifiers": [
-    {
-      "name": "html-js-classifier",
-      "version": "9",
-      "prediction": {
-        "kind": "classification",
-        "label": "phishing",
-        "scores": {
-          "benign": 0.01,
-          "phishing": 0.96,
-          "malware": 0.02,
-          "spam": 0.01
-        }
-      },
-      "explanation": {
-        "method": "shap",
-        "base_value": 0.13,
-        "features": [
+  "result": {
+    "domains": [
+      {
+        "domain_id": "example.com",
+        "classifiers": [
           {
-            "name": "external_script_ratio",
-            "value": 0.91,
-            "contribution": 0.42
-          },
-          {
-            "name": "form_count",
-            "value": 2,
-            "contribution": 0.18
+            "name": "html-js-classifier",
+            "version": "9",
+            "prediction": {
+              "kind": "classification",
+              "label": "phishing",
+              "scores": {
+                "benign": 0.01,
+                "phishing": 0.96,
+                "malware": 0.02,
+                "spam": 0.01
+              }
+            },
+            "explanation": {
+              "method": "shap",
+              "base_value": 0.13,
+              "features": [
+                {
+                  "name": "external_script_ratio",
+                  "value": 0.91,
+                  "contribution": 0.42
+                },
+                {
+                  "name": "form_count",
+                  "value": 2,
+                  "contribution": 0.18
+                }
+              ]
+            }
           }
         ]
+      },
+      {
+        "domain_id": "example.org",
+        "classifiers": []
       }
-    }
-  ]
+    ]
+  }
 }
 ```
 
-The concrete classifier payload is produced by the phase result serializer. The transport wrapper does not interpret classifier semantics.
+`domains` is always a list. One domain is simply a list containing one domain.
+
+`include_explanations` is a request-level flag. It controls whether the same `/predict` operation also executes the configured explanation logic.
 
 ## HTTP wrapper
 
@@ -114,7 +129,7 @@ transport:
     port: 8080
 ```
 
-HTTP is the default standalone transport because it is simple to invoke from local scripts, tests and a future deployment platform.
+HTTP is the default standalone transport because it is simple to invoke from local scripts, tests and a deployment platform.
 
 ## Kafka wrapper
 
@@ -136,14 +151,14 @@ Parameters:
 - `bootstrap_servers`: Kafka broker address(es);
 - `input_topic`: topic from which this phase consumes requests;
 - `output_topic`: topic to which this phase publishes responses;
-- `group_id`: consumer group for this microservice instance set;
+- `group_id`: consumer group shared by replicas of this phase;
 - `client_id`: optional Kafka client identifier.
 
 The wrapper does not decide which phase to call next and does not access the THOR fact store. Topic routing/orchestration remains the caller's responsibility.
 
 ## Switching wrappers
 
-The same phase instance can be exposed through either wrapper:
+The same phase implementation can be exposed through either wrapper:
 
 ```text
                          +----------------+
@@ -156,13 +171,49 @@ Kafka input topic ------>|                |
                                 +----> Kafka output topic
 ```
 
-There is no THOR adapter class in the architecture. Deployment chooses the wrapper.
+There is no THOR adapter class. Deployment chooses the wrapper.
 
-## Explanation is part of inference
+## Horizontal scaling
 
-There is intentionally no separate `/explain` endpoint for normal inference. `/predict` returns predictions and local explanation data together.
+Multiple instances of the same phase are expected:
 
-A diagnostic endpoint may be added later, but it is not the production explanation contract.
+```text
+Kafka input topic
+      |
+      +----> phase instance 1
+      +----> phase instance 2
+      +----> phase instance 3
+      |
+      v
+Kafka output topic
+```
+
+All Kafka replicas of the same phase use the same `group_id`; Kafka distributes partitions across active consumers. The topic therefore needs enough partitions to support the desired consumer parallelism.
+
+For HTTP, multiple replicas can sit behind a load balancer.
+
+Replica count is a deployment concern, not a classifier or extractor concern. Different phases may intentionally use different replica counts, so deeper pipeline phases can consume fewer resources when their input volume is smaller.
+
+## Bounded batch concurrency
+
+A phase may receive many domains in one request. The phase configuration can bound the number processed concurrently by one instance:
+
+```yaml
+execution:
+  parallel_classifiers: true
+  max_concurrent_domains: 4
+```
+
+This is independent of horizontal replica count.
+
+## Explanation mode
+
+There is intentionally no separate production `/explain` endpoint. `/predict` is the single classify route.
+
+- `include_explanations: false` -> prediction only;
+- `include_explanations: true` -> prediction plus local explanation.
+
+This makes it possible to benchmark eager explanation storage against later on-demand reclassification without creating a second classifier API.
 
 ## No collection metrics here
 

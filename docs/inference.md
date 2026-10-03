@@ -1,22 +1,39 @@
 # Inference
 
+## Batch-first contract
+
+A phase accepts one service request containing one or more domains. A single-domain request is represented as a batch of one item.
+
+```text
+service request
+      |
+      +-- domain A
+      +-- domain B
+      +-- domain C
+              |
+              v
+          same PhaseRunner
+```
+
+Each domain has a stable `domain_id` used to correlate its classifier results.
+
 ## Standalone
 
 ```text
-input fixture / local facts
+local HTTP request
+       |
+       v
+replaceable transport wrapper
        |
        v
      phase
        |
-       +--> extractor
-       |
+       +--> extractor(s)
        +--> classifier A
        +--> classifier B
        |
-       +--> per-feature explanations
-       |
        v
-  phase result
+  batched phase result
 ```
 
 No collector or external service is required.
@@ -24,59 +41,89 @@ No collector or external service is required.
 ## Production/THOR
 
 ```text
-THOR
-  |
-  | service.dispatch with facts
-  v
-phase microservice
-  |
-  | service.result with predictions + explanations
-  v
-THOR fact store
+THOR V1
+   |
+   | Kafka request
+   v
+Kafka wrapper
+   |
+   v
+same ServiceHandler + PhaseRunner
+   |
+   | Kafka response
+   v
+THOR V1
 ```
 
 The phase does not decide which future collector to invoke.
 
-## Every inference includes explanations
+## One classify route, optional explanations
 
-The production inference result contains local explanation information for every classifier for which the configured explanation method is supported.
-
-There is no assumption that explanations are requested only for selected investigations.
-
-The result must identify:
-
-- classifier;
-- model version;
-- feature schema version;
-- explanation method;
-- feature value;
-- per-feature contribution;
-- base/reference value where applicable;
-- output class/target to which contributions refer.
-
-For multiclass models, contributions must be attributable to a specific output class.
-
-Example:
+The same `/predict` route is used for both normal classification and classification with explanations. The request contains:
 
 ```json
 {
-  "classifier": "threat-classifier",
-  "model_version": "17",
-  "target": "phishing",
-  "method": "shap",
-  "features": [
-    {"name": "form_count", "value": 2, "contribution": 0.31},
-    {"name": "external_script_ratio", "value": 0.91, "contribution": 0.22}
+  "request_id": "req-123",
+  "phase": "html",
+  "phase_version": "3",
+  "include_explanations": false,
+  "domains": [
+    {
+      "domain_id": "example.com",
+      "facts": {}
+    }
   ]
 }
 ```
 
-## Explanation completeness
+Set `include_explanations: true` to request local explanation data for that batch.
 
-If a model's explanation method cannot provide an exact per-feature attribution, the classifier must declare the limitation explicitly. The service must not fabricate SHAP values or silently omit the explanation.
+This deliberately supports two deployment strategies:
 
-For supported models, SHAP is the default local explanation strategy.
+1. **Eager explanations:** request explanations for all classifications, retain the results, and let a later THOR V2 explainability system consume them.
+2. **On-demand explanations:** normally classify with `include_explanations: false`; later re-submit selected domains with `include_explanations: true` when an explanation is needed.
 
-## Result retention
+The classifier implementation is the same in both cases. The only difference is whether the explanation step is executed for that request.
 
-The classification pipeline returns the explanation. A later explainability module may store, aggregate, visualize or combine it with other evidence. That module is outside this project.
+## Result shape
+
+```json
+{
+  "request_id": "req-123",
+  "phase": "html",
+  "phase_version": "3",
+  "result": {
+    "domains": [
+      {
+        "domain_id": "example.com",
+        "classifiers": [
+          {
+            "name": "html-js-classifier",
+            "version": "9",
+            "prediction": {
+              "kind": "classification",
+              "label": "phishing"
+            },
+            "explanation": {
+              "method": "shap"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+When explanations were not requested, the `explanation` field is omitted rather than containing a fabricated or empty explanation.
+
+## Batch concurrency
+
+Batching and horizontal scaling are separate controls:
+
+- `domains[]` controls how many domains are carried by one request;
+- `max_concurrent_domains` controls how many domains one phase instance processes concurrently;
+- the deployment replica count controls how many copies of the phase exist;
+- for Kafka, topic partition count limits useful consumer parallelism.
+
+This permits shallow phases with high traffic to run many replicas while deeper phases can run fewer replicas because fewer domains reach them.

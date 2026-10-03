@@ -44,7 +44,8 @@ Test:
 - class mapping;
 - multiclass probabilities;
 - specialized detector scores;
-- explanation presence;
+- explanation presence when requested;
+- explanation omission when not requested;
 - per-feature contribution alignment;
 - model/version metadata.
 
@@ -60,13 +61,22 @@ Kafka wrapper
 
 and compare the semantic result.
 
+Also test that:
+
+- one-domain and multi-domain requests use the same contract;
+- `domain_id` is preserved for every result;
+- `include_explanations=false` does not invoke the explanation step;
+- `include_explanations=true` includes the explanation payload;
+- batch concurrency is bounded;
+- multiple instances can consume work independently.
+
 ## 6. Integration tests
 
 When THOR exists, verify:
 
-- dispatch facts map correctly to phase input;
+- Kafka dispatch data maps correctly to phase input;
 - returned classifier facts are correctly declared;
-- explanation facts are retained;
+- explanation facts are retained when requested;
 - phase failure maps to service error/skip semantics;
 - no service attempts to access the fact store.
 
@@ -92,9 +102,10 @@ Keep a stable, versioned regression set separate from training data. It should c
 - ambiguous/mixed cases;
 - malformed input;
 - missing optional facts;
-- explanation edge cases.
+- explanation edge cases;
+- batch requests.
 
-## 9. Transport contract tests
+## Transport contract tests
 
 The transport layer should be tested independently from the model. In particular, verify that:
 

@@ -3,3 +3,6 @@ transport:
   http:
     host: 0.0.0.0
     port: 8080
+
+# HTTP can be placed behind a load balancer with multiple replicas of the same phase.
+# Each replica uses the same phase configuration and core implementation.

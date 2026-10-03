@@ -1,4 +1,4 @@
-"""Transport contracts shared by HTTP, Kafka and future wrappers."""
+"""Wire contracts shared by interchangeable HTTP and Kafka wrappers."""
 from dataclasses import asdict, dataclass
 from typing import Any, Protocol
 import json
@@ -11,18 +11,35 @@ class ServiceRequest:
     request_id: str
     phase: str
     phase_version: str
-    facts: dict[str, Any]
+    domains: tuple[dict[str, Any], ...]
+    include_explanations: bool = False
 
     def to_phase_input(self) -> PhaseInput:
-        return PhaseInput(request_id=self.request_id, facts=self.facts)
+        return PhaseInput(
+            request_id=self.request_id,
+            domains=self.domains,
+            include_explanations=self.include_explanations,
+        )
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ServiceRequest":
+        raw_domains = data.get("domains")
+        # v6 is batch-first. A single-item list is still the normal way to send one domain.
+        if not isinstance(raw_domains, list) or not raw_domains:
+            raise ValueError("'domains' must be a non-empty list")
+        domains: list[dict[str, Any]] = []
+        for domain in raw_domains:
+            if not isinstance(domain, dict):
+                raise ValueError("each item in 'domains' must be an object")
+            if "domain_id" not in domain:
+                raise ValueError("each domain must contain 'domain_id'")
+            domains.append(dict(domain))
         return cls(
             request_id=str(data["request_id"]),
             phase=str(data["phase"]),
             phase_version=str(data["phase_version"]),
-            facts=dict(data.get("facts", {})),
+            domains=tuple(domains),
+            include_explanations=bool(data.get("include_explanations", False)),
         )
 
 
@@ -40,14 +57,20 @@ class ServiceResponse:
             phase=result.phase,
             phase_version=result.version,
             result={
-                "classifiers": [
+                "domains": [
                     {
-                        "name": item.classifier,
-                        "version": item.version,
-                        "prediction": _jsonable(item.prediction),
-                        "explanation": _jsonable(item.explanation),
+                        "domain_id": domain.domain_id,
+                        "classifiers": [
+                            {
+                                "name": item.classifier,
+                                "version": item.version,
+                                "prediction": _jsonable(item.prediction),
+                                **({"explanation": _jsonable(item.explanation)} if item.explanation is not None else {}),
+                            }
+                            for item in domain.classifiers
+                        ],
                     }
-                    for item in result.classifiers
+                    for domain in result.domains
                 ]
             },
         )
@@ -57,7 +80,7 @@ class ServiceResponse:
 
 
 class TransportWrapper(Protocol):
-    """Wire-level wrapper. It owns serialization and delivery, not ML logic."""
+    """Wire-level wrapper. It owns serialization/delivery, not ML logic."""
 
     def start(self, handler) -> None: ...
 

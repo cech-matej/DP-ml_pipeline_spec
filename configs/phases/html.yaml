@@ -19,6 +19,7 @@ classifiers:
 
 execution:
   parallel_classifiers: true
+  max_concurrent_domains: 4
 
 policy:
   type: rule_based

@@ -8,15 +8,11 @@ from domain_detection.phases.contracts import PhaseInput, PhaseResult
 
 @dataclass(frozen=True)
 class ServiceRequest:
-    request_id: str
-    phase: str
-    phase_version: str
     domains: tuple[dict[str, Any], ...]
     include_explanations: bool = False
 
     def to_phase_input(self) -> PhaseInput:
         return PhaseInput(
-            request_id=self.request_id,
             domains=self.domains,
             include_explanations=self.include_explanations,
         )
@@ -34,10 +30,10 @@ class ServiceRequest:
             if "domain_id" not in domain:
                 raise ValueError("each domain must contain 'domain_id'")
             domains.append(dict(domain))
+        ids = [str(domain["domain_id"]) for domain in domains]
+        if len(ids) != len(set(ids)):
+            raise ValueError("'domain_id' values must be unique within a request")
         return cls(
-            request_id=str(data["request_id"]),
-            phase=str(data["phase"]),
-            phase_version=str(data["phase_version"]),
             domains=tuple(domains),
             include_explanations=bool(data.get("include_explanations", False)),
         )
@@ -45,7 +41,6 @@ class ServiceRequest:
 
 @dataclass(frozen=True)
 class ServiceResponse:
-    request_id: str
     phase: str
     phase_version: str
     result: dict[str, Any]
@@ -53,7 +48,6 @@ class ServiceResponse:
     @classmethod
     def from_phase_result(cls, result: PhaseResult) -> "ServiceResponse":
         return cls(
-            request_id=result.request_id,
             phase=result.phase,
             phase_version=result.version,
             result={

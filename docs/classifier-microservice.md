@@ -33,9 +33,6 @@ Input:
 
 ```json
 {
-  "request_id": "req-123",
-  "phase": "html",
-  "phase_version": "3",
   "include_explanations": false,
   "domains": [
     {
@@ -57,9 +54,8 @@ Output:
 
 ```json
 {
-  "request_id": "req-123",
   "phase": "html",
-  "phase_version": "3",
+  "phase_version": "4",
   "result": {
     "domains": [
       {
@@ -106,7 +102,9 @@ Output:
 }
 ```
 
-`domains` is always a list. One domain is simply a list containing one domain.
+`domains` is always a list. One domain is simply a list containing one domain. `domain_id` values must be unique within a request.
+
+The request does not contain `request_id` or `phase_version`. The active phase version is deployment configuration and is returned by the service. For HTTP, the response is naturally associated with the request. For Kafka, message keys/headers can carry transport-level correlation metadata without putting it into the ML contract.
 
 `include_explanations` is a request-level flag. It controls whether the same `/predict` operation also executes the configured explanation logic.
 
@@ -190,7 +188,7 @@ Kafka output topic
 
 All Kafka replicas of the same phase use the same `group_id`; Kafka distributes partitions across active consumers. The topic therefore needs enough partitions to support the desired consumer parallelism.
 
-For HTTP, multiple replicas can sit behind a load balancer.
+For HTTP, multiple replicas can sit behind a load balancer. See `docs/http-load-balancing.md` for a concrete Docker Compose + HAProxy example and the exact commands for running 1, 2 or more phase instances.
 
 Replica count is a deployment concern, not a classifier or extractor concern. Different phases may intentionally use different replica counts, so deeper pipeline phases can consume fewer resources when their input volume is smaller.
 
@@ -204,7 +202,9 @@ execution:
   max_concurrent_domains: 4
 ```
 
-This is independent of horizontal replica count.
+If a request contains more than 4 domains, the additional domains wait in the same request until one of the four execution slots becomes available. They are not rejected solely because the batch is larger than the limit.
+
+This is independent of horizontal replica count. Replica count is configured by the deployment/orchestrator, not in the phase manifest. See `configs/deployments/` and `docs/scaling.md`.
 
 ## Explanation mode
 

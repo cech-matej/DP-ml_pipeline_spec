@@ -1,0 +1,13 @@
+# Deployment-level configuration. This is intentionally separate from the phase manifest.
+deployment:
+  name: html-phase-http
+  phase: html
+  transport: http
+  # Desired number of identical phase instances in this environment.
+  replicas: 3
+  load_balancer: haproxy
+
+  # These are deployment examples, not phase behavior.
+  resources:
+    cpu: "2"
+    memory: "4Gi"

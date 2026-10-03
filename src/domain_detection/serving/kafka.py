@@ -42,7 +42,13 @@ class KafkaWrapper:
             async for message in consumer:
                 request = ServiceRequest.from_dict(decode_json(message.value))
                 response = self.handler.handle(request)
-                await producer.send_and_wait(self.output_topic, encode_json(response.to_dict()))
+                # Preserve the Kafka message key as transport-level correlation metadata.
+                # It is intentionally not part of ServiceRequest/ServiceResponse.
+                await producer.send_and_wait(
+                    self.output_topic,
+                    encode_json(response.to_dict()),
+                    key=message.key,
+                )
         finally:
             await consumer.stop()
             await producer.stop()

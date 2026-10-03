@@ -30,7 +30,6 @@ def make_phase():
 
 def test_batch_produces_result_for_each_domain():
     result = make_phase().run(PhaseInput(
-        request_id="r1",
         domains=(
             {"domain_id": "a", "facts": {"demo": {"value": 1}}},
             {"domain_id": "b", "facts": {"demo": {"value": 0}}},
@@ -43,7 +42,6 @@ def test_batch_produces_result_for_each_domain():
 
 def test_explanations_are_only_computed_when_requested():
     result = make_phase().run(PhaseInput(
-        request_id="r1",
         domains=({"domain_id": "a", "facts": {"demo": {"value": 1}}},),
         include_explanations=True,
     ))

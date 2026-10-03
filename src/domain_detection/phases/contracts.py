@@ -5,7 +5,6 @@ from typing import Any
 
 @dataclass(frozen=True)
 class PhaseInput:
-    request_id: str
     domains: tuple[dict[str, Any], ...]
     include_explanations: bool = False
 
@@ -26,7 +25,6 @@ class DomainResult:
 
 @dataclass(frozen=True)
 class PhaseResult:
-    request_id: str
     phase: str
     version: str
     domains: tuple[DomainResult, ...]

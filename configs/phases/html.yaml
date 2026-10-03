@@ -18,7 +18,10 @@ classifiers:
     input_schema: dom-fingerprint-v2
 
 execution:
+  # Independent classifiers for a domain may run concurrently.
   parallel_classifiers: true
+  # Maximum domains processed concurrently by ONE phase instance.
+  # Larger batches wait for free execution slots; they are not rejected.
   max_concurrent_domains: 4
 
 policy:

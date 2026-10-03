@@ -1,0 +1,12 @@
+# Deployment-level configuration for Kafka.
+deployment:
+  name: html-phase-kafka
+  phase: html
+  transport: kafka
+  # Number of identical consumers/instances to run.
+  replicas: 3
+  kafka: 
+    group_id: malicious-domain-html-v1
+    # The input topic should have at least this many partitions if all replicas
+    # are expected to process concurrently.
+    required_input_partitions: 3

@@ -1,0 +1,16 @@
+services:
+  html-phase:
+    build:
+      context: .
+      dockerfile: docker/html-phase.Dockerfile
+    expose:
+      - "8080"
+
+  http-load-balancer:
+    image: haproxy:3.0
+    depends_on:
+      - html-phase
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro

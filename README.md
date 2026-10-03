@@ -81,6 +81,6 @@ Kafka message -->|   PhaseRunner    |---> Kafka message
                  +------------------+
 ```
 
-Both wrappers use the same `ServiceRequest` / `ServiceResponse` contract. The request is batch-first (`domains[]`) and has one `include_explanations` flag. To run standalone, select `type: http`. To deploy behind THOR V1, select `type: kafka` and set the microservice's `input_topic` and `output_topic`. Extractors, classifiers, policies and explainability code do not change. The Kafka wrapper is a transport wrapper, not a THOR business-logic adapter. Multiple Kafka instances of the same phase share a consumer group for load balancing; deeper phases can be deployed with fewer replicas.
+Both wrappers use the same `ServiceRequest` / `ServiceResponse` contract. The request is batch-first (`domains[]`) and has one `include_explanations` flag. To run standalone, select `type: http`. To deploy behind THOR V1, select `type: kafka` and set the microservice's `input_topic` and `output_topic`. Extractors, classifiers, policies and explainability code do not change. The Kafka wrapper is a transport wrapper, not a THOR business-logic adapter. Multiple Kafka instances of the same phase share a consumer group for load balancing; deeper phases can be deployed with fewer replicas. For HTTP, see `docs/http-load-balancing.md` for a concrete HAProxy + Docker Compose setup.
 
 Read `docs/DOCUMENT_INDEX.md` first.

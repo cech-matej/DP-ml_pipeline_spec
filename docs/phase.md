@@ -49,6 +49,18 @@ Feature schema consumed by the classifier. It should match one of the schemas pr
 
 Whether independent classifiers may execute concurrently after their required features are available. `true` is the intended configuration when there are no dependencies between classifiers.
 
+### `execution.max_concurrent_domains`
+
+Maximum number of domains that one phase instance may process concurrently. This is a **per-instance concurrency limit**, not the total capacity of the phase deployment. If a request contains more domains than this value, the domains are processed in bounded waves: at most `max_concurrent_domains` domains run at once, while the remaining domains wait in the request until capacity becomes available. The request is not rejected merely because its batch is larger than this value.
+
+This setting is independent of the number of phase instances. For example, `max_concurrent_domains: 4` with 5 replicas gives up to 20 domains being processed concurrently across the deployment, subject to available resources and the transport/deployment layer.
+
+### `execution` and horizontal replicas
+
+`execution.max_concurrent_domains` controls concurrency **inside one running instance**. The number of running instances is a deployment concern and is not part of the phase manifest because it may differ between environments. Configure it in a deployment manifest or orchestration configuration. See `docs/scaling.md` and `docs/http-load-balancing.md`.
+
+For the example Docker Compose deployment, the desired replica count is represented by the `replicas` value in `configs/deployments/html-http.yaml`, while `docker compose up --scale html-phase=N` is the concrete local command that creates N instances. In a Kubernetes deployment, the equivalent setting would be the Deployment `spec.replicas`.
+
 ### `policy.type`
 
 Mechanism used to convert heterogeneous classifier results into an optional phase-level outcome. The current example uses `rule_based`.

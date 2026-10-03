@@ -15,7 +15,7 @@ service request
           same PhaseRunner
 ```
 
-Each domain has a stable `domain_id` used to correlate its classifier results.
+Each domain has a `domain_id` used to correlate its classifier results. The phase does not require a separate request identifier.
 
 ## Standalone
 
@@ -57,15 +57,14 @@ THOR V1
 
 The phase does not decide which future collector to invoke.
 
-## One classify route, optional explanations
+## Request contract
 
-The same `/predict` route is used for both normal classification and classification with explanations. The request contains:
+The caller selects the phase by sending the request to the already deployed phase service. The request does **not** choose the phase version. Only one configured version of a phase is expected to be running in a deployment. The active version is reported in the response.
+
+The request therefore contains only runtime input and the explanation mode:
 
 ```json
 {
-  "request_id": "req-123",
-  "phase": "html",
-  "phase_version": "3",
   "include_explanations": false,
   "domains": [
     {
@@ -76,7 +75,13 @@ The same `/predict` route is used for both normal classification and classificat
 }
 ```
 
-Set `include_explanations: true` to request local explanation data for that batch.
+`include_explanations` is optional and defaults to `false`. `domains` must contain at least one item. Each `domain_id` must be unique within the request so that results can be unambiguously matched to inputs.
+
+There is intentionally no `request_id` field. For HTTP, the response naturally belongs to the HTTP request. For Kafka, the transport wrapper can preserve Kafka message keys/headers as transport metadata if the caller needs message-level correlation; this metadata is not part of the ML classification contract.
+
+## One classify route, optional explanations
+
+The same `/predict` route is used for both normal classification and classification with explanations. Set `include_explanations: true` to request local explanation data for that batch.
 
 This deliberately supports two deployment strategies:
 
@@ -89,9 +94,8 @@ The classifier implementation is the same in both cases. The only difference is 
 
 ```json
 {
-  "request_id": "req-123",
   "phase": "html",
-  "phase_version": "3",
+  "phase_version": "4",
   "result": {
     "domains": [
       {
@@ -115,15 +119,18 @@ The classifier implementation is the same in both cases. The only difference is 
 }
 ```
 
-When explanations were not requested, the `explanation` field is omitted rather than containing a fabricated or empty explanation.
+`phase_version` is produced by the running service. The caller cannot select it in the request. When explanations were not requested, the `explanation` field is omitted rather than containing a fabricated or empty explanation.
 
 ## Batch concurrency
 
-Batching and horizontal scaling are separate controls:
+Batch size and concurrency are separate:
 
 - `domains[]` controls how many domains are carried by one request;
-- `max_concurrent_domains` controls how many domains one phase instance processes concurrently;
+- `execution.max_concurrent_domains` controls how many domains one phase instance processes concurrently;
+- domains beyond that limit wait in bounded in-process work until an execution slot is free;
 - the deployment replica count controls how many copies of the phase exist;
 - for Kafka, topic partition count limits useful consumer parallelism.
+
+For example, with `max_concurrent_domains: 4` and a request containing 10 domains, one instance processes at most 4 domains concurrently. The other 6 wait and are processed as earlier domains finish. The request is not split into separate transport requests by the phase.
 
 This permits shallow phases with high traffic to run many replicas while deeper phases can run fewer replicas because fewer domains reach them.

@@ -61,7 +61,6 @@ class PhaseRunner:
             results = [run_domain(domain) for domain in domains]
 
         return PhaseResult(
-            request_id=phase_input.request_id,
             phase=self.name,
             version=self.version,
             domains=tuple(results),

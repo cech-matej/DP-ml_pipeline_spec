@@ -1,10 +1,11 @@
 [project]
-name = "malicious-domain-ml"
+name = "malicious-domain-ml-pipeline"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
   "pydantic>=2",
   "pyyaml>=6",
+  "jsonschema>=4.22",
   "numpy>=1.26",
   "pandas>=2",
   "scikit-learn>=1.5",

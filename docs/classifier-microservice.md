@@ -204,7 +204,7 @@ execution:
 
 If a request contains more than 4 domains, the additional domains wait in the same request until one of the four execution slots becomes available. They are not rejected solely because the batch is larger than the limit.
 
-This is independent of horizontal replica count. Replica count is configured by the deployment/orchestrator, not in the phase manifest. See `configs/deployments/` and `docs/scaling.md`.
+This is independent of horizontal replica count. Replica count is configured by the deployment/orchestrator, not in the phase manifest. See `config/deployments/` and `docs/scaling.md`.
 
 ## Explanation mode
 

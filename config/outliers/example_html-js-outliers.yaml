@@ -1,6 +1,9 @@
+# EXAMPLE ONLY — illustrative configuration; not a live deployment setting.
+
 outlier_policy:
   name: html-js-outliers-v1
   scope: training_only
+  version: 1
 
 method:
   type: isolation_forest

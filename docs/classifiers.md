@@ -116,11 +116,11 @@ training:
 
 ## Current classifier manifests
 
-### `configs/classifiers/html-js.yaml`
+### `config/classifiers/example_html-js.yaml`
 
 A LightGBM multiclass classifier using `html-js-v5`, with four classes, calibrated-probability score semantics, required SHAP local explanations, native gain/mean-absolute-SHAP global explanations, and the `html-js-outliers-v1` training policy.
 
-### `configs/classifiers/dom-phishing.yaml`
+### `config/classifiers/example_dom-phishing.yaml`
 
 A similarity detector using `dom-fingerprint-v2`. Its output is the scalar `phishing_similarity` in `[0, 1]`. Local explanations use similarity components and global explanation uses component importance. It does not declare an outlier policy because the current manifest does not require one.
 

@@ -1,5 +1,31 @@
 # Testing
 
+## Running the test suite
+
+The repository uses **pytest**. It is listed in the `dev` optional dependencies in `pyproject.toml`.
+
+From the repository root, create/activate your virtual environment, then run:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest
+```
+
+To run one test file:
+
+```bash
+python -m pytest tests/test_config_validation.py -v
+```
+
+To run only the YAML configuration validator:
+
+```bash
+python scripts/validate_configs.py
+```
+
+The validator checks configuration files against reusable schemas in `schemas/config/`. When a configuration format changes, update the corresponding schema and keep examples/tests aligned.
+
+
 ## 1. Unit tests
 
 Test:

@@ -1,0 +1,44 @@
+type: object
+
+properties:
+  cascade:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+      version:
+        type: integer
+        minimum: 1
+    required:
+    - name
+    - version
+    additionalProperties: false
+
+  phases:
+    type: array
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        information_boundary:
+          type: string
+          minLength: 1
+        microservice:
+          type: string
+          minLength: 1
+      required:
+      - name
+      - information_boundary
+      additionalProperties: true
+    minItems: 1
+
+required:
+- cascade
+- phases
+
+additionalProperties: false
+$schema: https://json-schema.org/draft/2020-12/schema
+x-config-root-key: cascade

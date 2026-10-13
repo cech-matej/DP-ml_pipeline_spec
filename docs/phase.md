@@ -59,7 +59,7 @@ This setting is independent of the number of phase instances. For example, `max_
 
 `execution.max_concurrent_domains` controls concurrency **inside one running instance**. The number of running instances is a deployment concern and is not part of the phase manifest because it may differ between environments. Configure it in a deployment manifest or orchestration configuration. See `docs/scaling.md` and `docs/http-load-balancing.md`.
 
-For the example Docker Compose deployment, the desired replica count is represented by the `replicas` value in `configs/deployments/html-http.yaml`, while `docker compose up --scale html-phase=N` is the concrete local command that creates N instances. In a Kubernetes deployment, the equivalent setting would be the Deployment `spec.replicas`.
+For the example Docker Compose deployment, the desired replica count is represented by the `replicas` value in `config/deployments/example-html-http.yaml`, while `docker compose up --scale html-phase=N` is the concrete local command that creates N instances. In a Kubernetes deployment, the equivalent setting would be the Deployment `spec.replicas`.
 
 ### `policy.type`
 
@@ -75,7 +75,7 @@ Fallback phase-level outcome when no policy rule produces a more specific result
 
 ## Current phase manifest
 
-`configs/phases/html.yaml` defines the HTML phase, version `4`, with the `html` information boundary. It runs the HTML/JS and DOM/fingerprint extractors and pins the corresponding classifier versions. Independent classifiers are configured to run in parallel.
+`config/phases/example_html.yaml` defines the HTML phase, version `4`, with the `html` information boundary. It runs the HTML/JS and DOM/fingerprint extractors and pins the corresponding classifier versions. Independent classifiers are configured to run in parallel.
 
 Example:
 

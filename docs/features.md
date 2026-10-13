@@ -153,7 +153,7 @@ The extractor implementation and schema version are recorded together in W&B met
 
 ## 7. Current feature schemas
 
-### `configs/features/html-js-v5.yaml`
+### `config/features/example_html-js.yaml`
 
 - `schema.name`: `html-js`
 - `schema.version`: `5`
@@ -163,7 +163,7 @@ The extractor implementation and schema version are recorded together in W&B met
 - `form_count`: `int32`, required, derived from `html`
 - `inline_js_entropy`: `float32`, required, derived from `html`
 
-### `configs/features/dom-fingerprint-v2.yaml`
+### `config/features/example_dom-fingerprint.yaml`
 
 - `schema.name`: `dom-fingerprint`
 - `schema.version`: `2`

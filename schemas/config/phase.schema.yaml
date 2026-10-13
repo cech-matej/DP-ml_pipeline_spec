@@ -1,0 +1,109 @@
+type: object
+
+properties:
+  phase:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+      version:
+        type: integer
+        minimum: 1
+      information_boundary:
+        type: string
+        minLength: 1
+    required:
+    - name
+    - version
+    - information_boundary
+    additionalProperties: false
+
+  extractors:
+    type: array
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        version:
+          type: integer
+          minimum: 1
+      required:
+      - name
+      - version
+      additionalProperties: false
+    minItems: 1
+
+  classifiers:
+    type: array
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        version:
+          type: integer
+          minimum: 1
+        input_schema:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+            version:
+              type: integer
+              minimum: 1
+          required:
+          - name
+          - version
+          additionalProperties: false
+      required:
+      - name
+      - version
+      - input_schema
+      additionalProperties: false
+    minItems: 1
+
+  execution:
+    type: object
+    properties:
+      parallel_classifiers:
+        type: boolean
+      max_concurrent_domains:
+        type: integer
+        minimum: 1
+    required:
+    - parallel_classifiers
+    - max_concurrent_domains
+    additionalProperties: false
+
+  policy:
+    type: object
+
+  transport:
+    type: object
+    properties:
+      type:
+        enum:
+        - http
+        - kafka
+      http:
+        type: object
+      kafka:
+        type: object
+    required:
+    - type
+    additionalProperties: true
+
+required:
+- phase
+- extractors
+- classifiers
+- execution
+
+additionalProperties: false
+$schema: https://json-schema.org/draft/2020-12/schema
+x-config-root-key: phase

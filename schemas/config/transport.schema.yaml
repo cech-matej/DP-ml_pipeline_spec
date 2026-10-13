@@ -1,0 +1,58 @@
+type: object
+
+properties:
+  transport:
+    type: object
+    properties:
+      type:
+        enum:
+        - http
+        - kafka
+      http:
+        type: object
+        properties:
+          host:
+            type: string
+            minLength: 1
+          port:
+            type: integer
+            minimum: 1
+            maximum: 65535
+        required:
+        - host
+        - port
+        additionalProperties: true
+      kafka:
+        type: object
+        properties:
+          bootstrap_servers:
+            type: string
+            minLength: 1
+          input_topic:
+            type: string
+            minLength: 1
+          output_topic:
+            type: string
+            minLength: 1
+          group_id:
+            type: string
+            minLength: 1
+          client_id:
+            type: string
+            minLength: 1
+        required:
+        - bootstrap_servers
+        - input_topic
+        - output_topic
+        - group_id
+        additionalProperties: true
+    required:
+    - type
+    additionalProperties: true
+
+required:
+- transport
+
+additionalProperties: false
+$schema: https://json-schema.org/draft/2020-12/schema
+x-config-root-key: transport

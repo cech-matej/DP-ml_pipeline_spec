@@ -1,0 +1,55 @@
+type: object
+
+properties:
+  outlier_policy:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+      version:
+        type: integer
+        minimum: 1
+      scope:
+        const: training_only
+    required:
+    - name
+    - scope
+    additionalProperties: true
+
+  method:
+    type: object
+    properties:
+      type:
+        type: string
+        minLength: 1
+      contamination:
+        type: number
+        exclusiveMinimum: 0
+        maximum: 0.5
+    required:
+    - type
+    additionalProperties: true
+
+  action:
+    type: object
+    properties:
+      remove:
+        type: boolean
+    required:
+    - remove
+    additionalProperties: false
+
+  minimum_training_rows:
+    type: integer
+    minimum: 1
+
+required:
+- outlier_policy
+- method
+- action
+- minimum_training_rows
+
+additionalProperties: false
+$schema: https://json-schema.org/draft/2020-12/schema
+x-config-root-key: outlier_policy

@@ -1,0 +1,57 @@
+type: object
+
+properties:
+  schema:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+      version:
+        type: integer
+        minimum: 1
+      availability_boundary:
+        type: string
+        minLength: 1
+    required:
+    - name
+    - version
+    - availability_boundary
+    additionalProperties: false
+
+  features:
+    type: array
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        type:
+          enum:
+          - string
+          - bool
+          - int32
+          - int64
+          - float32
+          - float64
+        nullable:
+          type: boolean
+        source:
+          type: string
+          minLength: 1
+      required:
+      - name
+      - type
+      - nullable
+      - source
+      additionalProperties: false
+    minItems: 1
+
+required:
+- schema
+- features
+
+additionalProperties: false
+$schema: https://json-schema.org/draft/2020-12/schema
+x-config-root-key: schema

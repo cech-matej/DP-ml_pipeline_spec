@@ -62,10 +62,14 @@ src/domain_detection/
   phases/          phase composition and execution
   policies/        optional phase-level decision policies
   serving/         interchangeable HTTP/Kafka transport wrappers
-  training/        dataset loading, training and tuning
   explainability/  local/global explanation adapters
+config/            example configs now; versioned real configs can live alongside them
+schemas/config/    one reusable schema per configuration type
+scripts/           generic YAML/schema validator
+training/
+  models/          one team-facing training entry point per model
+  shared/          reusable dataset, outlier and evaluation helpers
 tests/
-configs/
 docs/
 ```
 
@@ -84,3 +88,19 @@ Kafka message -->|   PhaseRunner    |---> Kafka message
 Both wrappers use the same `ServiceRequest` / `ServiceResponse` contract. The request is batch-first (`domains[]`) and has one `include_explanations` flag. To run standalone, select `type: http`. To deploy behind THOR V1, select `type: kafka` and set the microservice's `input_topic` and `output_topic`. Extractors, classifiers, policies and explainability code do not change. The Kafka wrapper is a transport wrapper, not a THOR business-logic adapter. Multiple Kafka instances of the same phase share a consumer group for load balancing; deeper phases can be deployed with fewer replicas. For HTTP, see `docs/http-load-balancing.md` for a concrete HAProxy + Docker Compose setup.
 
 Read `docs/DOCUMENT_INDEX.md` first.
+
+## Configuration and model training
+
+Config contracts live separately in `schemas/config/`, one schema per type, and are validated with `python scripts/validate_configs.py`. See `docs/configuration-management.md` for the versioning policy, validation commands, and how to add future config fields. Per-model training entry points are in `training/models/`.
+
+## Run tests and validate configuration
+
+Install the project and its development dependencies from the repository root:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest
+python scripts/validate_configs.py
+```
+
+`pytest` is declared in the `dev` optional dependencies in `pyproject.toml`. The package uses the `src/` layout; installing with `-e` makes `domain_detection` importable for tests and local development.

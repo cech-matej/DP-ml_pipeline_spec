@@ -1,3 +1,5 @@
+# EXAMPLE ONLY — illustrative configuration; not a live deployment setting.
+
 classifier:
   name: html-js-classifier
   version: 9
@@ -7,7 +9,8 @@ implementation:
   source_module: domain_detection.classifiers.html_js
 
 input:
-  feature_schema: html-js-v5
+  - feature_schema: html-js
+    version: 5
 
 output:
   type: multiclass
@@ -28,4 +31,5 @@ explainability:
       - shap_mean_abs
 
 training:
-  outlier_policy: html-js-outliers-v1
+  - outlier_policy: html-js-outliers
+    version: 1

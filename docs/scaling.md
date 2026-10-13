@@ -48,7 +48,7 @@ If the request is so large that its total processing time becomes undesirable, t
 
 A phase can run as N identical instances. Replica count is **not** part of the phase manifest because it is a deployment property. Configure it in the environment/orchestrator.
 
-This repository includes example deployment configuration in `configs/deployments/`. For local Docker Compose, the desired replica count can be represented there and applied with:
+This repository includes example deployment configuration in `config/deployments/`. For local Docker Compose, the desired replica count can be represented there and applied with:
 
 ```bash
 docker compose up --build --scale html-phase=3

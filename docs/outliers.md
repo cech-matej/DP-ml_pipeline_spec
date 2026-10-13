@@ -32,7 +32,7 @@ Safety floor for the filtered training partition. Training must fail rather than
 
 ## Current policy
 
-`configs/outliers/html-js-outliers-v1.yaml` uses Isolation Forest with `0.01` contamination, removes detected training outliers, and requires at least `10,000` rows after filtering.
+`config/outliers/example_html-js.yaml` uses Isolation Forest with `0.01` contamination, removes detected training outliers, and requires at least `10,000` rows after filtering.
 
 ## Pipeline
 

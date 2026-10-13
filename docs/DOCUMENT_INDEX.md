@@ -29,3 +29,5 @@
 
 - `scaling.md` — batch processing, horizontal replicas, Kafka partitioning and resource scaling by pipeline depth
 - `http-load-balancing.md` — concrete HTTP load-balancer setup with HAProxy and Docker Compose
+
+- `configuration-management.md` — example configs, schema-driven validation, config versioning, and model training entry points.

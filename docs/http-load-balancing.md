@@ -82,7 +82,7 @@ backend html_phase
 
 ## Choosing the number of replicas
 
-The replica count is not configured in `configs/phases/html.yaml`. That file describes the phase itself. Replica count belongs to deployment configuration:
+The replica count is not configured in `config/phases/example_html.yaml`. That file describes the phase itself. Replica count belongs to deployment configuration:
 
 ```yaml
 deployment:

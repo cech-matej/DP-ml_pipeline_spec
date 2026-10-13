@@ -28,7 +28,7 @@ The information boundary expected to be available when that phase is called. Thi
 
 ## Current cascade manifest
 
-`configs/cascades/production-example.yaml` is deliberately an orchestration example. It lists lexical, DNS, TLS/RDAP and HTML boundaries and maps the HTML phase to the `html-phase` microservice. The future THOR flow decides when each phase is called.
+`config/cascades/example.yaml` is deliberately an orchestration example. It lists lexical, DNS, TLS/RDAP and HTML boundaries and maps the HTML phase to the `html-phase` microservice. The future THOR flow decides when each phase is called.
 
 A future implementation may add explicit routing/gate rules here or, more appropriately for THOR V1, keep those decisions in the THOR rule/gate layer.
 

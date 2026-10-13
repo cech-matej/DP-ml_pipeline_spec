@@ -1,3 +1,5 @@
+# EXAMPLE ONLY — illustrative configuration; not a live deployment setting.
+
 # Deployment-level configuration for Kafka.
 deployment:
   name: html-phase-kafka

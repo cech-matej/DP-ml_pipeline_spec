@@ -1,3 +1,5 @@
+# EXAMPLE ONLY — illustrative configuration; not a live deployment setting.
+
 schema:
   name: html-js
   version: 5

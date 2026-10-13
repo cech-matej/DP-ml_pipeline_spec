@@ -1,3 +1,5 @@
+# EXAMPLE ONLY — illustrative configuration; not a live deployment setting.
+
 # Deployment-level configuration. This is intentionally separate from the phase manifest.
 deployment:
   name: html-phase-http

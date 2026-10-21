@@ -1,0 +1,24 @@
+# Versioned classifier configuration for the lexical multiclass model.
+
+classifier:
+  name: lexical
+  version: 1
+
+implementation:
+  framework: scikit-learn
+  source_module: domain_detection.classifiers.lexical
+
+input:
+  - feature_schema: lexical
+    version: 1
+
+output:
+  type: multiclass
+  classes: [benign, malware, phishing, dga]
+
+explainability:
+  local:
+    method: feature_contribution
+    required: true
+  global:
+    methods: [feature_importance]

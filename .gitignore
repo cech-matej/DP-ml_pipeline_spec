@@ -1,10 +1,29 @@
-.venv/
-**/__pycache__
-**/*.egg-info
-*.pyc
-**/.pytest_cache/
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
 
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Packaging and builds
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Testing
+.pytest_cache/
+
+# Environment variables / secrets
+.env
+
+# IDEs and editors
 .vscode/
 .idea/
 
-.env
+# Project-specific data
+artifacts/

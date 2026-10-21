@@ -20,7 +20,7 @@ class ServiceRequest:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ServiceRequest":
         raw_domains = data.get("domains")
-        # v6 is batch-first. A single-item list is still the normal way to send one domain.
+
         if not isinstance(raw_domains, list) or not raw_domains:
             raise ValueError("'domains' must be a non-empty list")
         domains: list[dict[str, Any]] = []

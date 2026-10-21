@@ -1,0 +1,8 @@
+# Transport capability definition; phase-specific settings belong in config/phases/*.yaml
+
+transport:
+  type: http
+  required_parameters: [host, port]
+  parameters:
+    host: string
+    port: integer

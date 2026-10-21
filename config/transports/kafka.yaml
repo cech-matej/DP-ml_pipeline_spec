@@ -1,0 +1,11 @@
+# Transport capability definition; phase-specific settings belong in config/phases/*.yaml
+
+transport:
+  type: kafka
+  required_parameters: [bootstrap_servers, input_topic, output_topic, group_id]
+  parameters:
+    bootstrap_servers: string
+    input_topic: string
+    output_topic: string
+    group_id: string
+    client_id: string

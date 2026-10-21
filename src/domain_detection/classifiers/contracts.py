@@ -7,8 +7,8 @@ class ClassifierPrediction:
     kind: str
     label: str | None = None
     scores: dict[str, float] | None = None
-    score_name: str | None = None
-    score: float | None = None
+    # score_name: str | None = None
+    # score: float | None = None
 
 
 @dataclass(frozen=True)

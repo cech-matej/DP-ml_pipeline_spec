@@ -104,3 +104,20 @@ python scripts/validate_configs.py
 ```
 
 `pytest` is declared in the `dev` optional dependencies in `pyproject.toml`. The package uses the `src/` layout; installing with `-e` makes `domain_detection` importable for tests and local development.
+
+
+## First runnable classifier: lexical
+
+A lexical multiclass baseline is included with classes `benign`, `malware`, `phishing`, and `dga`.
+
+See [`docs/lexical-first-run.md`](docs/lexical-first-run.md) for setup, training, HTTP inference and example batch requests. In short:
+
+```bash
+python -m pip install -e ".[dev,serving]"
+python training/models/lexical/train.py --dataset data/domains.csv
+python scripts/run_lexical_http.py
+```
+
+Your dataset must contain `domain_name` and `label` columns. The project does not ship a trained model or private datasets, so train the model before starting the service. The same `LexicalExtractor` implementation is used in both training and inference.
+
+See [docs/transport-configuration.md](docs/transport-configuration.md) for the transport catalog vs phase-specific settings. The minimal lexical-only cascade smoke-test config is `config/cascades/example_lexical.yaml`.

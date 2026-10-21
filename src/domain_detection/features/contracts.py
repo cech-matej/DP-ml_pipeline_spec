@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
+
 
 class FeatureSchemaMismatch(ValueError):
     pass
@@ -48,10 +50,10 @@ class FeatureSchema:
             raise FeatureSchemaMismatch(f"feature={name} is not nullable")
         checks = {
             "string": str,
-            "int32": int,
-            "int64": int,
-            "float32": (float, int),
-            "float64": (float, int),
+            "int32": (int, np.int32),
+            "int64": (int, np.int64),
+            "float32": (float, int, np.float32),
+            "float64": (float, int, np.float64),
             "bool": bool,
         }
         expected = checks.get(dtype)

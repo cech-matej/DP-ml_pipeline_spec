@@ -1,0 +1,32 @@
+# EXAMPLE ONLY — runnable local lexical phase configuration.
+
+phase:
+  name: lexical
+  version: 1
+  information_boundary: domain_name
+
+extractors:
+  - name: lexical
+    version: 1
+
+classifiers:
+  - name: lexical
+    version: 1
+    input_schema:
+      name: lexical
+      version: 1
+
+execution:
+  parallel_classifiers: false
+  max_concurrent_domains: 4
+
+policy:
+  type: rule_based
+  outputs: [benign, malware, phishing, dga]
+  otherwise: uncertain    # policy fallback; not a model class
+
+transport:
+  type: http
+  http:
+    host: 0.0.0.0
+    port: 8080

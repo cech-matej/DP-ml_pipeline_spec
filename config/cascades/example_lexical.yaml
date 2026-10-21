@@ -1,0 +1,11 @@
+# Minimal cascade for end-to-end testing: one lexical phase, no collection/orchestration.
+
+cascade:
+  name: lexical-test
+  version: 1
+
+phases:
+  - name: lexical
+    version: 1
+    config: config/phases/example_lexical.yaml
+    information_boundary: domain_name

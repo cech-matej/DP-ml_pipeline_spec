@@ -10,6 +10,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import tldextract
 
 from .contracts import FeatureSchema, FeatureVector
@@ -137,13 +138,14 @@ class LexicalExtractor:
             path = self.data_dir / f"ngram_freq_{family}.json"
             self.ngrams[family] = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
-    def extract_batch(self, domains: "Any") -> "Any":
-        """Extract lexical features using DataFrame/Series operations.
+    def extract_batch(self, domains: Any) -> pd.DataFrame:
+        """Extract only YAML-selected features, in schema order.
 
-        :param domains: DataFrame, Series, or iterable of domain strings.
-        :return: DataFrame with features in canonical schema order.
+        The schema selects features; this module owns their implementations.
+        Calculations registered as callables are lazy: they run only when their
+        feature is requested. Shared derived values are computed only for groups
+        of requested features that need them.
         """
-        import pandas as pd
 
         if isinstance(domains, pd.DataFrame):
             if "domain_name" not in domains.columns:
@@ -153,102 +155,263 @@ class LexicalExtractor:
             raw = domains.reset_index(drop=True)
         else:
             raw = pd.Series(list(domains), dtype="object")
-        if raw.isna().any():
-            raise ValueError("lexical extractor requires non-empty domain_name strings")
-        if not raw.map(lambda value: isinstance(value, str) and bool(value.strip())).all():
+
+        if raw.isna().any() or not raw.map(
+            lambda value: isinstance(value, str) and bool(value.strip())
+        ).all():
             raise ValueError("lexical extractor requires non-empty domain_name strings")
 
-        # Match extract(): normalize once, then reuse the parsed domain components.
+        requested = list(self.schema.features)
+        needed = set(requested)
+        features = pd.DataFrame(index=raw.index)
         domain = raw.map(lambda value: value.strip().lower().rstrip("."))
-        parsed = domain.map(tldextract.extract)
-        tld = parsed.map(lambda ext: ext.suffix.lower())
-        sld = parsed.map(lambda ext: ext.domain.lower())
-        subdomain = parsed.map(lambda ext: ext.subdomain.lower())
-        parts = domain.str.split(".")
-        sub_parts = subdomain.map(lambda value: [p for p in value.split(".") if p and p != "www"])
-        sub_parts = sub_parts.combine(sld, lambda subs, second: subs + ([second] if second else []))
-        subtext = sub_parts.map("".join)
-        part_lengths = parts.map(lambda values: [len(part) for part in values])
-        features = pd.DataFrame(index=domain.index)
 
-        # Series operations are used for simple lexical features; apply is reserved
-        # for algorithms whose semantics are inherently per string (entropy/hash/ngrams).
-        features["lex_name_len"] = domain.str.len().astype("int64")
-        features["lex_has_digit"] = domain.str.contains(r"\d", regex=True).astype("int64")
-        features["lex_phishing_keyword_count"] = domain.map(lambda text: sum(word in text for word in PHISHING_KEYWORDS))
-        features["lex_benign_keyword_count"] = domain.map(lambda text: sum(word in text for word in BENIGN_KEYWORDS))
-        features["lex_consecutive_chars"] = domain.map(lambda text: max((len(m.group()) for m in re.finditer(r"(.)\1*", text)), default=0))
-        features["lex_tld_len"] = tld.str.len()
-        features["lex_tld_abuse_score"] = tld.map(TLD_ABUSE_SCORES).fillna(0.0)
-        features["lex_tld_hash"] = tld.map(simhash32)
-        features["lex_sld_len"] = sld.str.len()
-        features["lex_sld_norm_entropy"] = sld.map(normalized_entropy)
-        digit_count = sld.str.count(r"\d")
-        features["lex_sld_digit_count"] = digit_count
-        features["lex_sld_digit_ratio"] = digit_count.div(sld.str.len().replace(0, float("nan"))).fillna(0.0)
-        features["lex_sld_phishing_keyword_count"] = sld.map(lambda text: sum(word in text for word in PHISHING_KEYWORDS))
-        vowel_count = sld.str.count(r"[aeiouy]")
-        features["lex_sld_vowel_count"] = vowel_count
-        features["lex_sld_vowel_ratio"] = vowel_count.div(sld.str.len().replace(0, float("nan"))).fillna(0.0)
-        consonant_count = sld.str.count(r"[bcdfghjklmnpqrstvwxyz]")
-        features["lex_sld_consonant_count"] = consonant_count
-        features["lex_sld_consonant_ratio"] = consonant_count.div(sld.str.len().replace(0, float("nan"))).fillna(0.0)
-        non_alnum = sld.map(lambda text: sum(not char.isalnum() for char in text))
-        features["lex_sld_non_alphanum_count"] = non_alnum
-        features["lex_sld_non_alphanum_ratio"] = non_alnum.div(sld.str.len().replace(0, float("nan"))).fillna(0.0)
-        hex_count = sld.str.count(r"[0-9a-f]")
-        features["lex_sld_hex_count"] = hex_count
-        features["lex_sld_hex_ratio"] = hex_count.div(sld.str.len().replace(0, float("nan"))).fillna(0.0)
-        features["lex_sub_count"] = subdomain.map(lambda value: len([p for p in value.split(".") if p and p != "www"]))
-        features["lex_stld_unique_char_count"] = (sld + tld).map(lambda value: len(set(value.replace(".", ""))))
-        features["lex_begins_with_digit"] = domain.str.match(r"^\d").astype("int64")
-        features["lex_www_flag"] = parts.map(lambda value: int(value[0] == "www"))
-        features["lex_sub_max_consonant_len"] = subtext.map(lambda text: max((len(m.group()) for m in re.finditer(r"[bcdfghjklmnpqrstvwxyz]+", text)), default=0))
-        features["lex_sub_norm_entropy"] = subtext.map(normalized_entropy)
-        digit_count = subtext.str.count(r"\d")
-        features["lex_sub_digit_count"] = digit_count
-        features["lex_sub_digit_ratio"] = digit_count.div(subtext.str.len().replace(0, float("nan"))).fillna(0.0)
-        vowel_count = subtext.str.count(r"[aeiouy]")
-        features["lex_sub_vowel_count"] = vowel_count
-        features["lex_sub_vowel_ratio"] = vowel_count.div(subtext.str.len().replace(0, float("nan"))).fillna(0.0)
-        consonant_count = subtext.str.count(r"[bcdfghjklmnpqrstvwxyz]")
-        features["lex_sub_consonant_count"] = consonant_count
-        features["lex_sub_consonant_ratio"] = consonant_count.div(subtext.str.len().replace(0, float("nan"))).fillna(0.0)
-        non_alnum = subtext.map(lambda text: sum(not char.isalnum() for char in text))
-        features["lex_sub_non_alphanum_count"] = non_alnum
-        features["lex_sub_non_alphanum_ratio"] = non_alnum.div(subtext.str.len().replace(0, float("nan"))).fillna(0.0)
-        hex_count = subtext.str.count(r"[0-9a-f]")
-        features["lex_sub_hex_count"] = hex_count
-        features["lex_sub_hex_ratio"] = hex_count.div(subtext.str.len().replace(0, float("nan"))).fillna(0.0)
-        for family, grams in (("phishing", ("bigram", "trigram", "tetragram", "pentagram")), ("malware", ("bigram", "trigram", "tetragram")), ("dga", ("bigram", "trigram", "tetragram"))):
-            for gram in grams:
-                key = f"lex_{family}_{gram}_matches"
-                ngram_map = self.ngrams[family].get(f"{gram}_freq", {})
-                features[key] = subtext.map(lambda text, ng=ngram_map: ngram_matches(text, ng))
-        features["lex_avg_part_len"] = part_lengths.map(lambda lengths: sum(lengths) / len(lengths) if lengths else 0.0)
-        features["lex_stdev_part_lens"] = part_lengths.map(lambda lengths: math.sqrt(sum((n - sum(lengths) / len(lengths)) ** 2 for n in lengths) / len(lengths)) if lengths else 0.0)
-        features["lex_longest_part_len"] = part_lengths.map(lambda lengths: max(lengths, default=0))
-        features["lex_short_part_count"] = part_lengths.map(lambda lengths: sum(n <= 3 for n in lengths))
-        features["lex_medium_part_count"] = part_lengths.map(lambda lengths: sum(4 <= n <= 10 for n in lengths))
-        features["lex_long_part_count"] = part_lengths.map(lambda lengths: sum(11 <= n <= 30 for n in lengths))
-        features["lex_superlong_part_count"] = part_lengths.map(lambda lengths: sum(n >= 31 for n in lengths))
-        features["lex_shortest_sub_len"] = sub_parts.map(lambda values: min((len(value) for value in values), default=0))
-        features["lex_ipv4_in_domain"] = domain.str.contains(IPV4_RE, na=False).astype("int64")
-        features["lex_has_trusted_suffix"] = domain.map(lambda value: _suffix_match(value, TRUSTED_SUFFIXES))
-        features["lex_has_wellknown_suffix"] = domain.map(lambda value: _suffix_match(value, WELL_KNOWN_SUFFIXES))
-        features["lex_has_cdn_suffix"] = domain.map(lambda value: _suffix_match(value, CDN_SUFFIXES))
-        features["lex_has_vps_suffix"] = domain.map(lambda value: _suffix_match(value, VPS_SUFFIXES))
-        features["lex_has_img_suffix"] = domain.map(lambda value: _suffix_match(value, IMAGE_SUFFIXES))
-        features["lex_suffix_score"] = (10 * features["lex_has_trusted_suffix"] + 5 * features["lex_has_wellknown_suffix"] + 3 * features["lex_has_cdn_suffix"] + 2 * features["lex_has_vps_suffix"] + 8 * features["lex_has_img_suffix"])
+        def add(name: str, calculate) -> None:
+            """Run a feature calculation only when selected by the YAML schema."""
+            if name in needed and name not in features.columns:
+                features[name] = calculate()
 
-        # Schema validation is performed column-wise here; per-row validate() calls
-        # would reintroduce the Python loop this batch API is designed to eliminate.
-        expected = list(self.schema.features)
-        missing = set(expected) - set(features.columns)
-        extra = set(features.columns) - set(expected)
-        if missing or extra:
-            raise ValueError(f"feature schema mismatch: missing={sorted(missing)} extra={sorted(extra)}")
-        features = features.loc[:, expected]
+        # Simple features are kept in a compact registry. Lambdas defer work until
+        # add() confirms that the feature is enabled in the active schema.
+        simple_calculations = {
+            "lex_name_len": lambda: domain.str.len(),
+            "lex_has_digit": lambda: domain.str.contains(r"\d", regex=True).astype("int64"),
+            "lex_phishing_keyword_count": lambda: domain.map(
+                lambda text: sum(word in text for word in PHISHING_KEYWORDS)
+            ),
+            "lex_benign_keyword_count": lambda: domain.map(
+                lambda text: sum(word in text for word in BENIGN_KEYWORDS)
+            ),
+            "lex_consecutive_chars": lambda: domain.map(
+                lambda text: max(
+                    (len(match.group()) for match in re.finditer(r"(.)\1*", text)),
+                    default=0,
+                )
+            ),
+            "lex_begins_with_digit": lambda: domain.str.match(r"^\d").astype("int64"),
+            "lex_www_flag": lambda: domain.str.split(".").map(
+                lambda parts: int(parts[0] == "www")
+            ),
+            "lex_ipv4_in_domain": lambda: domain.str.contains(IPV4_RE, na=False).astype("int64"),
+        }
+        for name, calculate in simple_calculations.items():
+            add(name, calculate)
+
+        # Split-label parsing is shared and lazy: do it only if a selected feature
+        # requires a TLD, SLD, subdomain, or n-gram-derived value.
+        parsed_feature_names = {
+            "lex_tld_len", "lex_tld_abuse_score", "lex_tld_hash",
+            "lex_sld_len", "lex_sld_norm_entropy", "lex_sld_digit_count",
+            "lex_sld_digit_ratio", "lex_sld_phishing_keyword_count",
+            "lex_sld_vowel_count", "lex_sld_vowel_ratio",
+            "lex_sld_consonant_count", "lex_sld_consonant_ratio",
+            "lex_sld_non_alphanum_count", "lex_sld_non_alphanum_ratio",
+            "lex_sld_hex_count", "lex_sld_hex_ratio", "lex_sub_count",
+            "lex_stld_unique_char_count", "lex_sub_max_consonant_len",
+            "lex_sub_norm_entropy", "lex_sub_digit_count", "lex_sub_digit_ratio",
+            "lex_sub_vowel_count", "lex_sub_vowel_ratio",
+            "lex_sub_consonant_count", "lex_sub_consonant_ratio",
+            "lex_sub_non_alphanum_count", "lex_sub_non_alphanum_ratio",
+            "lex_sub_hex_count", "lex_sub_hex_ratio", "lex_shortest_sub_len",
+            "lex_phishing_bigram_matches", "lex_phishing_trigram_matches",
+            "lex_phishing_tetragram_matches", "lex_phishing_pentagram_matches",
+            "lex_malware_bigram_matches", "lex_malware_trigram_matches",
+            "lex_malware_tetragram_matches", "lex_dga_bigram_matches",
+            "lex_dga_trigram_matches", "lex_dga_tetragram_matches",
+        }
+
+        if needed & parsed_feature_names:
+            parsed = domain.map(tldextract.extract)
+            tld = parsed.map(lambda ext: ext.suffix.lower())
+            sld = parsed.map(lambda ext: ext.domain.lower())
+            subdomain = parsed.map(lambda ext: ext.subdomain.lower())
+            sub_parts = subdomain.map(
+                lambda value: [part for part in value.split(".") if part and part != "www"]
+            )
+            sub_parts = sub_parts.combine(
+                sld, lambda subs, second: subs + ([second] if second else [])
+            )
+            subtext = sub_parts.map("".join)
+
+            for name, calculate in {
+                "lex_tld_len": lambda: tld.str.len(),
+                "lex_tld_abuse_score": lambda: tld.map(TLD_ABUSE_SCORES).fillna(0.0),
+                "lex_tld_hash": lambda: tld.map(simhash32),
+                "lex_sld_len": lambda: sld.str.len(),
+                "lex_sld_norm_entropy": lambda: sld.map(normalized_entropy),
+                "lex_sld_phishing_keyword_count": lambda: sld.map(
+                    lambda value: sum(word in value for word in PHISHING_KEYWORDS)
+                ),
+                "lex_sub_count": lambda: subdomain.map(
+                    lambda value: len([
+                        part for part in value.split(".") if part and part != "www"
+                    ])
+                ),
+                "lex_stld_unique_char_count": lambda: (sld + tld).map(
+                    lambda value: len(set(value.replace(".", "")))
+                ),
+                "lex_sub_max_consonant_len": lambda: subtext.map(
+                    lambda value: max(
+                        (len(match.group()) for match in re.finditer(
+                            r"[bcdfghjklmnpqrstvwxyz]+", value
+                        )),
+                        default=0,
+                    )
+                ),
+                "lex_sub_norm_entropy": lambda: subtext.map(normalized_entropy),
+                "lex_shortest_sub_len": lambda: sub_parts.map(
+                    lambda values: min((len(value) for value in values), default=0)
+                ),
+            }.items():
+                add(name, calculate)
+
+            # Paired count/ratio features share the count and denominator.
+            def add_count_ratio(prefix, series, length, pattern, count_name, ratio_name):
+                if needed & {count_name, ratio_name}:
+                    count = series.str.count(pattern)
+                    add(count_name, lambda: count)
+                    add(
+                        ratio_name,
+                        lambda: count.div(length.replace(0, float("nan"))).fillna(0.0),
+                    )
+
+            sld_len = sld.str.len()
+            add_count_ratio(
+                "sld", sld, sld_len, r"\d",
+                "lex_sld_digit_count", "lex_sld_digit_ratio"
+            )
+            add_count_ratio(
+                "sld", sld, sld_len, r"[aeiouy]",
+                "lex_sld_vowel_count", "lex_sld_vowel_ratio"
+            )
+            add_count_ratio(
+                "sld", sld, sld_len, r"[bcdfghjklmnpqrstvwxyz]",
+                "lex_sld_consonant_count", "lex_sld_consonant_ratio"
+            )
+            if needed & {"lex_sld_non_alphanum_count", "lex_sld_non_alphanum_ratio"}:
+                count = sld.map(lambda value: sum(not char.isalnum() for char in value))
+                add("lex_sld_non_alphanum_count", lambda: count)
+                add(
+                    "lex_sld_non_alphanum_ratio",
+                    lambda: count.div(sld_len.replace(0, float("nan"))).fillna(0.0),
+                )
+            add_count_ratio(
+                "sld", sld, sld_len, r"[0-9a-f]",
+                "lex_sld_hex_count", "lex_sld_hex_ratio"
+            )
+
+            sub_len = subtext.str.len()
+            add_count_ratio(
+                "sub", subtext, sub_len, r"\d",
+                "lex_sub_digit_count", "lex_sub_digit_ratio"
+            )
+            add_count_ratio(
+                "sub", subtext, sub_len, r"[aeiouy]",
+                "lex_sub_vowel_count", "lex_sub_vowel_ratio"
+            )
+            add_count_ratio(
+                "sub", subtext, sub_len, r"[bcdfghjklmnpqrstvwxyz]",
+                "lex_sub_consonant_count", "lex_sub_consonant_ratio"
+            )
+            if needed & {"lex_sub_non_alphanum_count", "lex_sub_non_alphanum_ratio"}:
+                count = subtext.map(lambda value: sum(not char.isalnum() for char in value))
+                add("lex_sub_non_alphanum_count", lambda: count)
+                add(
+                    "lex_sub_non_alphanum_ratio",
+                    lambda: count.div(sub_len.replace(0, float("nan"))).fillna(0.0),
+                )
+            add_count_ratio(
+                "sub", subtext, sub_len, r"[0-9a-f]",
+                "lex_sub_hex_count", "lex_sub_hex_ratio"
+            )
+
+            ngram_specs = {
+                "phishing": ("bigram", "trigram", "tetragram", "pentagram"),
+                "malware": ("bigram", "trigram", "tetragram"),
+                "dga": ("bigram", "trigram", "tetragram"),
+            }
+            for family, grams in ngram_specs.items():
+                for gram in grams:
+                    name = f"lex_{family}_{gram}_matches"
+                    add(
+                        name,
+                        lambda family=family, gram=gram: subtext.map(
+                            lambda value: ngram_matches(
+                                value, self.ngrams[family].get(f"{gram}_freq", {})
+                            )
+                        ),
+                    )
+
+        # Part-length statistics are calculated only if at least one is requested.
+        part_names = {
+            "lex_avg_part_len", "lex_stdev_part_lens", "lex_longest_part_len",
+            "lex_short_part_count", "lex_medium_part_count", "lex_long_part_count",
+            "lex_superlong_part_count",
+        }
+        if needed & part_names:
+            part_lengths = domain.str.split(".").map(
+                lambda values: [len(part) for part in values]
+            )
+            for name, calculate in {
+                "lex_avg_part_len": lambda lengths: (
+                    sum(lengths) / len(lengths) if lengths else 0.0
+                ),
+                "lex_stdev_part_lens": lambda lengths: (
+                    math.sqrt(
+                        sum((value - sum(lengths) / len(lengths)) ** 2 for value in lengths)
+                        / len(lengths)
+                    ) if lengths else 0.0
+                ),
+                "lex_longest_part_len": lambda lengths: max(lengths, default=0),
+                "lex_short_part_count": lambda lengths: sum(value <= 3 for value in lengths),
+                "lex_medium_part_count": lambda lengths: sum(
+                    4 <= value <= 10 for value in lengths
+                ),
+                "lex_long_part_count": lambda lengths: sum(
+                    11 <= value <= 30 for value in lengths
+                ),
+                "lex_superlong_part_count": lambda lengths: sum(
+                    value >= 31 for value in lengths
+                ),
+            }.items():
+                add(name, lambda calculate=calculate: part_lengths.map(calculate))
+
+        # Suffix flags are registered by name; the score reuses the selected flags.
+        suffix_specs = {
+            "lex_has_trusted_suffix": TRUSTED_SUFFIXES,
+            "lex_has_wellknown_suffix": WELL_KNOWN_SUFFIXES,
+            "lex_has_cdn_suffix": CDN_SUFFIXES,
+            "lex_has_vps_suffix": VPS_SUFFIXES,
+            "lex_has_img_suffix": IMAGE_SUFFIXES,
+        }
+        if needed & (set(suffix_specs) | {"lex_suffix_score"}):
+            for name, suffixes in suffix_specs.items():
+                if name in needed or "lex_suffix_score" in needed:
+                    add(
+                        name,
+                        lambda suffixes=suffixes: domain.map(
+                            lambda value: _suffix_match(value, suffixes)
+                        ),
+                    )
+            add(
+                "lex_suffix_score",
+                lambda: (
+                    10 * features["lex_has_trusted_suffix"]
+                    + 5 * features["lex_has_wellknown_suffix"]
+                    + 3 * features["lex_has_cdn_suffix"]
+                    + 2 * features["lex_has_vps_suffix"]
+                    + 8 * features["lex_has_img_suffix"]
+                ),
+            )
+
+        missing = needed - set(features.columns)
+        if missing:
+            raise ValueError(
+                "feature implementations missing for configured features: "
+                f"{sorted(missing)}"
+            )
+
+        features = features.loc[:, requested]
         for name, spec in self.schema.features.items():
             dtype = spec["type"]
             if dtype.startswith("int"):
@@ -268,7 +431,7 @@ class LexicalExtractor:
         domain = source if isinstance(source, str) else source.get("domain_name")
         frame = self.extract_batch([domain])
         values = {
-            column: frame[column].iat[0]
+            column: (value.item() if hasattr(value := frame[column].iat[0], "item") else value)
             for column in frame.columns
         }
         validated = self.schema.validate(values)

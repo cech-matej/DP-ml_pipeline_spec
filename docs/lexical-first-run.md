@@ -64,3 +64,34 @@ Try `GET /health` first. This endpoint will fail to start if no trained model ar
 python -m pytest
 python scripts/validate_configs.py
 ```
+
+## Important limitations of this first implementation
+
+- The explanation is an importance-weighted feature ranking, not SHAP and not a signed causal attribution. It is explicitly labelled accordingly in responses. Replace it with SHAP before relying on explanations for analyst decisions.
+- The initial model is a Random Forest baseline. Compare per-class precision/recall, confusion matrix, calibration and false-positive/false-negative rates before deployment.
+
+## Reuse extracted features across training runs
+
+The feature YAML is the allow-list for a feature version: `LexicalExtractor` computes only the feature names declared in the loaded schema. Features implemented in `src/domain_detection/features/lexical.py` but omitted from that YAML are not computed or returned.
+
+Extract once to a reusable dataset:
+
+```bash
+python training/models/lexical/extract_features.py \
+  --dataset data/domains.csv \
+  --output data/domains-lexical-v1.parquet \
+  --feature-config config/features/lexical/v1.yaml \
+  --batch-size 10000
+```
+
+Then train repeatedly without rerunning feature extraction:
+
+```bash
+python training/models/lexical/train.py \
+  --dataset data/domains-lexical-v1.parquet \
+  --features-extracted \
+  --feature-config config/features/lexical/v1.yaml \
+  --n-estimators 300
+```
+
+The pre-extracted file must contain `domain_name`, `label`, and every feature column configured in the selected YAML version. Reuse it only with the same feature schema/version and compatible extraction assets (including the n-gram JSON files when those features are enabled). Without `--features-extracted`, training retains the existing behavior and extracts features itself.

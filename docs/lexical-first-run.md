@@ -79,7 +79,7 @@ Extract once to a reusable dataset:
 ```bash
 python training/models/lexical/extract_features.py \
   --dataset data/domains.csv \
-  --output data/domains-lexical-v1.parquet \
+  --output data/features/domains-lexical-v1.parquet \
   --feature-config config/features/lexical/v1.yaml \
   --batch-size 10000
 ```
@@ -88,7 +88,7 @@ Then train repeatedly without rerunning feature extraction:
 
 ```bash
 python training/models/lexical/train.py \
-  --dataset data/domains-lexical-v1.parquet \
+  --dataset data/features/domains-lexical-v1.parquet \
   --features-extracted \
   --feature-config config/features/lexical/v1.yaml \
   --n-estimators 300

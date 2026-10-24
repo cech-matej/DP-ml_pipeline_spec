@@ -27,3 +27,4 @@ dist/
 
 # Project-specific data
 artifacts/
+data/features/
